@@ -1,28 +1,45 @@
 import streamlit as st
 import pandas as pd
 import pickle
+import os
 
 # Load model
-model = pickle.load(open('model_rf.pkl', 'rb'))
+with open("model_rf.pkl", "rb") as f:
+    model = pickle.load(f)
 
-st.title("Employee Attrition Prediction")
+# Ambil daftar kolom yang digunakan model saat training
+model_features = model.feature_names_in_  # Ini hanya ada di scikit-learn >=1.0
 
-# Input fitur pengguna
+st.title("🧠 Employee Attrition Prediction")
+
+# Form input sederhana
 age = st.slider("Age", 18, 60, 30)
-monthly_income = st.number_input("Monthly Income", 1000, 20000, 5000)
-job_satisfaction = st.selectbox("Job Satisfaction", [1, 2, 3, 4])
-over_time = st.selectbox("OverTime", ['Yes', 'No'])
+income = st.number_input("Monthly Income", 1000, 20000, 5000)
+satisfaction = st.selectbox("Job Satisfaction", [1, 2, 3, 4])
+overtime = st.selectbox("OverTime", ['Yes', 'No'])
 
-# Preprocess input
-over_time_yes = 1 if over_time == 'Yes' else 0
+# Bangun input awal
+input_dict = {
+    'Age': age,
+    'MonthlyIncome': income,
+    'JobSatisfaction': satisfaction,
+    'OverTime_Yes': 1 if overtime == 'Yes' else 0,
+    'OverTime_No': 1 if overtime == 'No' else 0,
+}
 
-input_df = pd.DataFrame({
-    'Age': [age],
-    'MonthlyIncome': [monthly_income],
-    'JobSatisfaction': [job_satisfaction],
-    'OverTime_Yes': [over_time_yes]
-})
+# Ubah ke DataFrame
+input_df = pd.DataFrame([input_dict])
+
+# Tambahkan semua fitur kosong yg dibutuhkan model
+for col in model_features:
+    if col not in input_df.columns:
+        input_df[col] = 0
+
+# Urutkan kolom agar cocok 100% dengan model
+input_df = input_df[model_features]
 
 # Prediksi
-prediction = model.predict(input_df)[0]
-st.write("Prediction:", "Attrition" if prediction == 1 else "No Attrition")
+if st.button("Prediksi"):
+    prediction = model.predict(input_df)[0]
+    st.success(f"Hasil: {'Attrition (Akan Keluar)' if prediction == 1 else 'No Attrition (Tetap)'}")
+
